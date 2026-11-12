@@ -30,6 +30,19 @@ The branch does not need to be compatible with `main` or with a deployment of `m
 - The Admin page is unchanged, except the Debug generator: it writes test messages into the admin's conversation
   with one chosen person, and the two of them are the speakers.
 
+## The message search
+
+Main's search of the open conversation (`docs/spec/search.md`) works here, for the person and for the admin. Two
+parts of it stand in the sidebar on main, and this build has no sidebar:
+
+- Above 768 px the results open in a column to the right of the conversation while a search is active. On main
+  they take the place of the sidebar (SR-20). The message column gets narrower for that time.
+- At 768 px or less a search button in the header opens the search screen. On main the way in is a row at the
+  top of the sidebar (SR-24).
+- A direct message has no history limit, so the search reads the whole conversation (SR-06, SR-12).
+- The mailbox button goes to the people page, which closes the conversation and ends the search with it. Main
+  ends the search in the click itself (SR-22).
+
 ## The bot
 
 The bot is a user account. The admin sees it in the people page and can open its conversation; the bot's notices
@@ -124,5 +137,6 @@ Server: `Models/Chat/Channel.cs`, `Conversation.cs`, `SendMessage.cs`, `Services
 Client: `js/router.js`, `main.js`, `store.js`, `pages/people.js` (new), `pages/chat.js`, `ui/frame.js`, and
 small cuts in `hub.js`, `session.js`, `notify.js`, `offline/snapshot.js`, `ui/timeline.js`, `ui/composer.js`,
 `pages/settings.js`, `pages/admin.js`, `pages/invite.js`, `service-worker.js`, `index.html`, `app.css`,
-`css/frame.css`, `css/people.css` (new, in the place of main's `css/channel-settings.css`), `css/composer.css`.
+`css/frame.css`, `css/people.css` (new, in the place of main's `css/channel-settings.css`), `css/composer.css`,
+and the search without the sidebar in `ui/search.js` and `css/search.css`.
 Removed: `pages/channel-settings.js`, `ui/sidebar.js`, `css/channel-settings.css`.

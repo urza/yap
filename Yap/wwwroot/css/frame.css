@@ -351,8 +351,7 @@
         max-width: 80px;
     }
 
-    /* Five controls on a 390 px row: the gaps and the people button's padding shrink, the hit areas keep their
-       size (user feedback 2026-10-18). */
+    /* Five controls on a 390 px row: the gaps shrink, the hit areas keep their size (user feedback 2026-10-18). */
     .header-controls {
         gap: 0.25rem;
     }

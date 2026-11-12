@@ -1,5 +1,6 @@
 // The frame around a conversation (frame.md): the header with the title, the connection dot, the status
-// chip and its menu, the pin button and the mailbox; the header line; the profile card. Mounted once; the pages change only
+// chip and its menu, the pin button and the mailbox; the header line; the profile card. The message search with its
+// field in the header is ui/search.js, mounted here with the frame. Mounted once; the pages change only
 // the content column (SH-01). There is no sidebar in this build: a person has one conversation, and the
 // admin has the people page as the home (docs/dmonly.md).
 
@@ -15,6 +16,7 @@ import { openPins } from './pins.js';
 import * as router from '../router.js';
 import * as session from '../session.js';
 import { hasQueued } from '../sender.js';
+import { Search } from './search.js';
 
 let frame = null;          // the mounted .chat-container
 let offs = [];
@@ -24,14 +26,18 @@ export function mount(appRoot) {
   if (frame) return frame.querySelector('.messages-container');
   frame = clone('t-frame');
   appRoot.replaceChildren(frame);
+  const search = Search(frame);
 
   const header = frame.querySelector('.chat-header');
   header.querySelector('.status-button').addEventListener('click', openStatusMenu);
-  header.querySelector('.mailbox-button').addEventListener('click', () => router.navigate('/'));   // SH-09: the home holds the unread conversation
+  // SH-09: the home holds the unread conversation. The move there closes the open conversation, and an open
+  // search ends with it (SR-22); main needs a call of its own for that, because its mailbox stays on the page.
+  header.querySelector('.mailbox-button').addEventListener('click', () => router.navigate('/'));
   header.querySelector('.pins-button').addEventListener('click', togglePins);   // SH-47
   wireConnectionDot(header.querySelector('.connection-dot'));
 
   offs = [
+    search.unmount,
     on('user', renderChip), on('users', renderChip), on('presence', renderChip), on('connection', renderChip),
     on('unread', renderMailbox), on('mutes', renderMailbox), on('open', renderMailbox),
     on('pins', renderPins), on('open', renderPins),
@@ -62,6 +68,7 @@ export function setTitle(kind, { partner = null, text = '' } = {}) {
 function renderTitle() {
   if (!frame) return;
   frame.dataset.context = title.kind === 'dm' ? 'dm' : 'page';   // themes.css keys the conversation pattern on "dm"
+  frame.classList.toggle('no-conversation', title.kind !== 'dm');   // search.css: the people page and Settings have nothing to search (SR-19)
   frame.querySelector('.header-line').src = title.kind === 'dm' ? '/images/purpleline01_3px.png' : '/images/turqline01_3px.png';
   const host = frame.querySelector('.header-title');
   if (title.kind === 'home') {
@@ -168,7 +175,7 @@ function togglePins() {
   closePins = openPins(frame.querySelector('.pins-button'), () => { closePins = null; });
 }
 
-// ---- the mailbox (SH-08, SH-09) ----
+// ---- the mailbox (SH-09) ----
 
 function renderMailbox() {
   if (!frame) return;
