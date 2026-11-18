@@ -1,6 +1,6 @@
 # Yap
 
-Self hosted community chat inspired by Discord aesthetics
+Yap is self-hosted real-time chat for small communities, inspired by Discord aesthetics. Frictionless login, fun and customizable to make your own, great with media, fast and polished on both desktop and phone (PWA).
 
 > **Branch `dmonly`:** this branch has no rooms. Every person talks to the admin and to nobody else; the admin
 > sees a people page and opens a conversation from it. The design and the decisions are in
