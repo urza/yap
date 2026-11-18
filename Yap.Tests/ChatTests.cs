@@ -372,6 +372,81 @@ public class ChatTests : IClassFixture<YapFactory>
         await hub.DisposeAsync();
     }
 
+    [Fact(DisplayName = "TL-43: messageLinks names the conversation, the other person, the author and the time of a message the reader may read")]
+    public async Task MessageLinks_of_a_message()
+    {
+        var hub = await (await _app.AdminAsync()).ConnectAsync();
+        var (dm, all) = await DmWithMessages(hub, "links_one", 10, TimeSpan.FromHours(1));
+
+        var link = Assert.Single(await hub.InvokeAsync<List<MessageLinkDto>>("MessageLinks", new[] { all[4].Id }));
+        Assert.Equal(all[4].Id, link.Id);
+        Assert.Equal(dm.Id, link.ChannelId);
+        Assert.Equal("links_one", link.DmUser);   // every conversation of this build is a direct message (docs/dmonly.md)
+        Assert.Equal(all[4].Username, link.Username);
+        Assert.Equal(all[4].Timestamp, link.Timestamp);
+        await hub.DisposeAsync();
+    }
+
+    // Main tests the history limit of a room here (TL-05). A direct message has none: the oldest message has an entry.
+    [Fact(DisplayName = "TL-44: an unknown id and a deleted message have no entry; the oldest message of a direct message has one")]
+    public async Task MessageLinks_are_silent_about_what_the_reader_may_not_read()
+    {
+        var boss = await _app.AdminAsync();
+        var admin = await boss.ConnectAsync();
+        var (_, all) = await DmWithMessages(admin, "links_silent", 120, TimeSpan.FromDays(3));
+        var gone = (await (await boss.Http.PostAsJsonAsync("/api/dm/links_silent/messages", new { clientId = Guid.NewGuid(), text = "soon deleted" })).Content.ReadFromJsonAsync<MessageDto>())!;
+        Assert.Single(await admin.InvokeAsync<List<MessageLinkDto>>("MessageLinks", new[] { gone.Id }));   // it had an entry while it existed
+        Assert.Null(await admin.InvokeAsync<HubError?>("Delete", gone.Id));
+
+        var asked = new[] { Guid.NewGuid(), gone.Id, all[0].Id, all[^1].Id };
+        var found = await admin.InvokeAsync<List<MessageLinkDto>>("MessageLinks", asked);
+        Assert.Equal([all[0].Id, all[^1].Id], found.Select(l => l.Id));
+        await admin.DisposeAsync();
+    }
+
+    // Main has three ordinary people here. On this branch a pair needs the admin on one side.
+    [Fact(DisplayName = "TL-43, TL-44: a direct message has an entry for its two people, with the other person's name, and none for a third person")]
+    public async Task MessageLinks_of_a_direct_message()
+    {
+        var boss = await _app.AdminAsync();
+        var erin = await _app.SignInAsync("erin_links");
+        var grace = await _app.SignInAsync("grace_links");
+        var dm = Chat.GetOrCreateDm(IdOf("erin_links"), boss.Username)!;
+        var sent = (await (await erin.Http.PostAsJsonAsync($"/api/channels/{dm.Id}/messages", new { clientId = Guid.NewGuid(), text = "between us" })).Content.ReadFromJsonAsync<MessageDto>())!;
+
+        var erinHub = await erin.ConnectAsync();
+        var bossHub = await boss.ConnectAsync();
+        var graceHub = await grace.ConnectAsync();
+        var forErin = Assert.Single(await erinHub.InvokeAsync<List<MessageLinkDto>>("MessageLinks", new[] { sent.Id }));
+        Assert.Equal(dm.Id, forErin.ChannelId);
+        Assert.Equal(boss.Username, forErin.DmUser);
+        var forBoss = Assert.Single(await bossHub.InvokeAsync<List<MessageLinkDto>>("MessageLinks", new[] { sent.Id }));
+        Assert.Equal("erin_links", forBoss.DmUser);
+        Assert.Empty(await graceHub.InvokeAsync<List<MessageLinkDto>>("MessageLinks", new[] { sent.Id }));
+        await erinHub.DisposeAsync();
+        await bossHub.DisposeAsync();
+        await graceHub.DisposeAsync();
+    }
+
+    [Fact(DisplayName = "TL-43: messageLinks reads the first 50 ids of a call")]
+    public async Task MessageLinks_reads_the_first_50_ids()
+    {
+        var hub = await (await _app.AdminAsync()).ConnectAsync();
+        var (_, all) = await DmWithMessages(hub, "links_cap", 60, TimeSpan.FromHours(1));
+
+        var links = await hub.InvokeAsync<List<MessageLinkDto>>("MessageLinks", all.Select(m => m.Id).ToArray());
+        Assert.Equal(all.Take(50).Select(m => m.Id), links.Select(l => l.Id));
+        await hub.DisposeAsync();
+    }
+
+    [Fact(DisplayName = "SH-42: the address of a message link answers with the app shell")]
+    public async Task Message_link_address_answers_the_shell()
+    {
+        var response = await _app.CreateClient().GetAsync("/m/PyuMHppHTQuxxlLnqQ1PGA");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
+    }
+
     [Fact(DisplayName = "NT-01, NT-03, NT-06: a message counts for the other person until they open the conversation")]
     public async Task Unread_counts_and_mark_read()
     {

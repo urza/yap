@@ -24,6 +24,7 @@ public static class ShellEndpoints
     private static readonly string[] Routes =
     [
         "/", "/dm/{user}", "/settings", "/admin", "/login", "/verify/{user}", "/invite/{code}",
+        "/m/{code}",   // a message link (TL-43); the client reads the code and asks the hub where the message is
     ];
 
     public static void MapShell(this WebApplication app)
