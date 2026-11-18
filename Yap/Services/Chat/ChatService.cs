@@ -172,8 +172,9 @@ public class ChatService
         if (_channelMessages.TryRemove(channelId, out var messages))
             foreach (var m in messages) _channelOfMessage.TryRemove(m.Id, out _);
         _channelLocks.TryRemove(channelId, out _);
-        foreach (var key in _readStates.Keys.Where(k => k.ChannelId == channelId).ToList())
-            _readStates.TryRemove(key, out _);
+        // A ConcurrentDictionary permits TryRemove while a loop reads it, so no copy of the keys is necessary.
+        foreach (var (key, _) in _readStates)
+            if (key.ChannelId == channelId) _readStates.TryRemove(key, out _);
         _presence.ForgetChannel(channelId);
         _notifications.ClearOverridesForChannel(channelId);
         _writer.Enqueue(Writes.DeleteChannel(channelId));
@@ -190,8 +191,10 @@ public class ChatService
     {
         var dms = DmChannelsOf(user.Id).Select(c => c.Id).ToList();
         foreach (var id in dms) Purge(id);
-        foreach (var key in _readStates.Keys.Where(k => k.UserId == user.Id).ToList()) _readStates.TryRemove(key, out _);
-        foreach (var key in _byClientId.Keys.Where(k => k.UserId == user.Id).ToList()) _byClientId.TryRemove(key, out _);
+        foreach (var (key, _) in _readStates)
+            if (key.UserId == user.Id) _readStates.TryRemove(key, out _);
+        foreach (var (key, _) in _byClientId)
+            if (key.UserId == user.Id) _byClientId.TryRemove(key, out _);
         _quickReactions.ForgetUser(user.Id);
 
         _writer.Enqueue(Writes.RelabelAuthor(user.Id, ghostName));
@@ -461,8 +464,8 @@ public class ChatService
     private void ForgetOldClientIds()
     {
         var limit = DateTime.UtcNow - ClientIdMemory;
-        foreach (var key in _byClientId.Where(e => e.Value.At < limit).Select(e => e.Key).ToList())
-            _byClientId.TryRemove(key, out _);
+        foreach (var (key, entry) in _byClientId)
+            if (entry.At < limit) _byClientId.TryRemove(key, out _);
     }
 
     /// <summary>Link cards for a text message, in text order (MR-19). Media messages get none.</summary>
