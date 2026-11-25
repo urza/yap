@@ -18,12 +18,10 @@ Each line below has one of four states:
 
 ## The core offer
 
-- **Decided.** The messenger offers the Yap experience: GIFs from Klipy, cached video embeds, good media and typing
-  indicators. It does not try to be the most secure chat.
-- **Decided.** The UI says that chats are not end-to-end encrypted.
-- **Decided.** There is one type of chat. A split into "secret chats" and normal chats is rejected.
-- **Proposed.** Encryption for all chats is a topic for a later brainstorm. It must not take away a part of the
-  experience.
+- **Decided.** The messenger is Yap for private conversations. It works in the style of Signal, and it has the
+  design, the UI and the features of Yap.
+- **Decided.** The Yap experience is the offer. It includes GIFs from Klipy, cached video embeds, good media and
+  typing indicators.
 
 ## First screen
 
@@ -88,6 +86,14 @@ Each line below has one of four states:
 - **Open.** The names are not decided. "App lock", "Chat lock", "Passcode lock" and "Screen lock" are all possible,
   and "panic passcode" for the duress code. The UI text must keep this code apart from a pinned message and a pinned
   conversation.
+
+## Encryption
+
+- **Decided.** The experience comes before the highest security. Chats are not end-to-end encrypted, and the UI
+  says so.
+- **Decided.** There is one type of chat. A split into "secret chats" and normal chats is rejected.
+- **Proposed.** Encryption for all chats is a topic for a later brainstorm. It must not take away a part of the
+  experience.
 
 ## The bot
 
