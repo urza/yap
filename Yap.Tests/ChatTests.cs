@@ -579,8 +579,8 @@ public class ChatTests : IClassFixture<YapFactory>
     public async Task A_reaction_sends_only_the_emoji_lists_that_changed()
     {
         var cleo = await _app.SignInAsync("cleo_recent");
-        var first = await SendToLobby(cleo, "react to me");
-        var second = await SendToLobby(cleo, "and to me");
+        var first = await SendToAdmin(cleo, "react to me");
+        var second = await SendToAdmin(cleo, "and to me");
         var hub = await cleo.ConnectAsync();
         var events = System.Threading.Channels.Channel.CreateUnbounded<JsonElement>();
         hub.On<JsonElement>("me", partial => { if (partial.TryGetProperty("emoji", out var emoji)) events.Writer.TryWrite(emoji); });
@@ -637,8 +637,8 @@ public class ChatTests : IClassFixture<YapFactory>
                 var rita = await app.SignInAsync("rita_quick");
                 var chat = app.Service<ChatService>();
                 var id = app.Service<UserService>().GetByUsername("rita_quick")!.Id;
-                var older = await SendToLobby(rita, "the older message", chat.LobbyId);
-                var newer = await SendToLobby(rita, "the newer message", chat.LobbyId);
+                var older = await SendToAdmin(rita, "the older message", app);
+                var newer = await SendToAdmin(rita, "the newer message", app);
 
                 // The reaction on the newer message comes first, so 👀 is the newest reaction while the server runs.
                 // Each new emoji takes the place of the one that leaves: 🚀 the place of 👍, then 👀 the place of 😂.
@@ -676,7 +676,7 @@ public class ChatTests : IClassFixture<YapFactory>
         var gus = await _app.SignInAsync("gus_quick");
         var chat = _app.Service<ChatService>();
         var id = _app.Service<UserService>().GetByUsername("gus_quick")!.Id;
-        var message = await SendToLobby(gus, "the last word of gus");
+        var message = await SendToAdmin(gus, "the last word of gus");
         Assert.Null(chat.ToggleReaction(id, "gus_quick", message.Id, "🔥"));
         Assert.Equal([Heart, "😂", "🔥"], chat.QuickReactions(id));
 
@@ -688,40 +688,43 @@ public class ChatTests : IClassFixture<YapFactory>
     [Fact(DisplayName = "MR-83: the replay at the start takes each person's newest 150 reactions from the newest messages of each conversation, in the order of time across the conversations")]
     public async Task The_replay_takes_the_newest_reactions_of_all_conversations()
     {
-        await using var app = new YapFactory();   // its own lobby: the limit counts every message of a conversation
-        var sam = await app.SignInAsync("sam_seed");
+        // Main has one person in the lobby and in a direct message. On this branch only the admin has two
+        // conversations, so the admin sends the messages and reacts (docs/dmonly.md).
+        await using var app = new YapFactory();   // its own server: the limit counts every message of a conversation
+        var boss = await app.AdminAsync();
+        await app.SignInAsync("sam_seed");
         await app.SignInAsync("tia_seed");
         var chat = app.Service<ChatService>();
         var users = app.Service<UserService>();
-        var id = users.GetByUsername("sam_seed")!.Id;
-        var lobby = $"/api/channels/{chat.LobbyId}/messages";
+        var id = users.GetByUsername(boss.Username)!.Id;
+        const string toSam = "/api/dm/sam_seed/messages", toTia = "/api/dm/tia_seed/messages";
         async Task<Guid> Send(string url, string text) =>
-            (await (await sam.Http.PostAsJsonAsync(url, new { clientId = Guid.NewGuid(), text })).Content.ReadFromJsonAsync<MessageDto>())!.Id;
+            (await (await boss.Http.PostAsJsonAsync(url, new { clientId = Guid.NewGuid(), text })).Content.ReadFromJsonAsync<MessageDto>())!.Id;
 
         // Four messages in the order of time, in two conversations in turn. The reactions come in another order: a
         // reaction has no time of its own, so the replay follows the messages.
-        var l1 = await Send(lobby, "the lobby, first");
-        var d1 = await Send("/api/dm/tia_seed/messages", "the direct message, second");
-        var l2 = await Send(lobby, "the lobby, third");
-        var d2 = await Send("/api/dm/tia_seed/messages", "the direct message, fourth");
-        foreach (var (message, emoji) in new[] { (d2, "d"), (l1, "a"), (l2, "c"), (d1, "b"), (d2, "e") })
-            Assert.Null(chat.ToggleReaction(id, "sam_seed", message, emoji));
+        var s1 = await Send(toSam, "to sam, first");
+        var t1 = await Send(toTia, "to tia, second");
+        var s2 = await Send(toSam, "to sam, third");
+        var t2 = await Send(toTia, "to tia, fourth");
+        foreach (var (message, emoji) in new[] { (t2, "d"), (s1, "a"), (s2, "c"), (t1, "b"), (t2, "e") })
+            Assert.Null(chat.ToggleReaction(id, boss.Username, message, emoji));
 
         Assert.Equal(["a", "b", "c", "d", "e"], chat.ReactionsForSeed()[id]);
         Assert.False(chat.ReactionsForSeed().ContainsKey(users.GetByUsername("tia_seed")!.Id));   // no reactions, no entry
 
-        // The limit of messages is per conversation: the newest message of the lobby and the newest one of the
-        // direct message. One limit for all conversations together gives only "d" and "e" here.
+        // The limit of messages is per conversation: the newest message to sam and the newest one to tia. One limit
+        // for all conversations together gives only "d" and "e" here.
         Assert.Equal(["c", "d", "e"], chat.ReactionsForSeed(maxMessagesPerChannel: 1)[id]);
         // The limit per person keeps the person's newest reactions of all conversations, not the newest of each.
         Assert.Equal(["d", "e"], chat.ReactionsForSeed(maxReactionsPerUser: 2)[id]);
         Assert.Equal(["b", "c", "d", "e"], chat.ReactionsForSeed(maxReactionsPerUser: 4)[id]);
 
         // The limits that the server uses at its start: 200 reactions on two newer messages, and the newest 150 stay.
-        var many = await Send(lobby, "many reactions");
-        var more = await Send(lobby, "more reactions");
-        for (var i = 0; i < 100; i++) Assert.Null(chat.ToggleReaction(id, "sam_seed", many, $"x{i}"));
-        for (var i = 0; i < 100; i++) Assert.Null(chat.ToggleReaction(id, "sam_seed", more, $"y{i}"));
+        var many = await Send(toSam, "many reactions");
+        var more = await Send(toSam, "more reactions");
+        for (var i = 0; i < 100; i++) Assert.Null(chat.ToggleReaction(id, boss.Username, many, $"x{i}"));
+        for (var i = 0; i < 100; i++) Assert.Null(chat.ToggleReaction(id, boss.Username, more, $"y{i}"));
         Assert.Equal(
             Enumerable.Range(50, 50).Select(i => $"x{i}").Concat(Enumerable.Range(0, 100).Select(i => $"y{i}")).ToList(),
             chat.ReactionsForSeed()[id]);
@@ -730,8 +733,13 @@ public class ChatTests : IClassFixture<YapFactory>
     // The heart as code points: it needs its variation selector to equal the server's default (MR-41).
     private const string Heart = "\u2764\uFE0F";
 
-    private async Task<MessageDto> SendToLobby(SignedIn person, string text, Guid? lobby = null) =>
-        (await (await person.Http.PostAsJsonAsync($"/api/channels/{lobby ?? _app.Service<ChatService>().LobbyId}/messages", new { clientId = Guid.NewGuid(), text })).Content.ReadFromJsonAsync<MessageDto>())!;
+    // Main sends these messages into the lobby. A person of this branch has one conversation, the one with the admin
+    // (docs/dmonly.md). `app` is the server of the person when the test started its own.
+    private async Task<MessageDto> SendToAdmin(SignedIn person, string text, YapFactory? app = null)
+    {
+        var admin = await (app ?? _app).AdminAsync();
+        return (await (await person.Http.PostAsJsonAsync($"/api/dm/{admin.Username}/messages", new { clientId = Guid.NewGuid(), text })).Content.ReadFromJsonAsync<MessageDto>())!;
+    }
 
     private static List<string> Strings(JsonElement array) => array.EnumerateArray().Select(e => e.GetString()!).ToList();
 

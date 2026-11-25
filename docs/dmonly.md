@@ -43,6 +43,18 @@ parts of it stand in the sidebar on main, and this build has no sidebar:
 - The mailbox button goes to the people page, which closes the conversation and ends the search with it. Main
   ends the search in the click itself (SR-22).
 
+## Message links
+
+Main's message links (`/m/{code}`, "Copy Message Link" in the More menu) work here. A link always leads to a
+direct message, because this build has no other kind of conversation:
+
+- The label of a link in a message is the author and the time. On main a link to a room message has the room's
+  name first (MR-86).
+- An address that the server refuses opens the home `/` with the dialog "Message not found.". On main it opens
+  the lobby (TL-44).
+- A link works for the two people of its conversation. For the admin that is every conversation; for a person
+  it is the conversation with the admin.
+
 ## The bot
 
 The bot is a user account. The admin sees it in the people page and can open its conversation; the bot's notices

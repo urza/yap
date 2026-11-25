@@ -93,9 +93,9 @@ export function takeJump(channelId) {
 // Opens the message of a link. `link` is the clicked element; without one, the address itself was opened
 // (pages/message-link.js), and `id` is null when the text after /m/ was no code.
 export async function open(id, link) {
-  // The reader can go to another page while this function waits: a tap on a room in the sidebar, Back, a sign-out.
-  // The open then ends with no navigation, no jump and no dialog. Without this, the answer of a slow server would
-  // put the linked conversation in the place of the room that the reader chose. Each navigation makes a new
+  // The reader can go to another page while this function waits: a tap on a person of the people page, Back, a
+  // sign-out. The open then ends with no navigation, no jump and no dialog. Without this, the answer of a slow server
+  // would put the linked conversation in the place of the page that the reader chose. Each navigation makes a new
   // router.current, so the same object means that the reader did not move.
   const at = router.current;
   const left = () => router.current !== at;
