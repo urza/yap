@@ -50,10 +50,12 @@ Each line below has one of four states:
   feature.
 - **Decided.** The nickname replaces the name of the contact everywhere for this user. That includes the list of
   conversations, the messages and the notifications, and later the groups.
+- **Decided.** The nickname is the primary name of the contact. The original username shows in the profile details
+  of the contact.
+- **Decided.** The search finds a contact by the nickname and by the username.
 - **Proposed.** A user sees only the people who share a conversation with them. This one rule covers direct messages
   and groups.
 - **Proposed.** The username search has a rate limit, because an answer shows if a username exists.
-- **Proposed.** The real username still shows in the profile of the contact, and the search finds both names.
 - **Proposed.** The server stores the nickname with the account of the user, so each device of the user shows it.
   The server also needs the nickname for the text of a notification.
 - **Open.** A request from a stranger needs a place. Signal shows it in the same list, and the conversation opens
