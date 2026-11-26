@@ -82,7 +82,7 @@ const plan = recording ? RECORD_PLAN : Object.fromEntries(profiles.map(p => [p, 
 for (const p of profiles) if (!(p in PROFILES)) throw new Error(`unknown profile ${p}; known: ${Object.keys(PROFILES).join(', ')}`);
 for (const j of Object.values(plan).flat()) if (!JOURNEYS[j]) throw new Error(`unknown journey ${j}; known: ${ALL_JOURNEYS.join(', ')}`);
 
-// A side is one build: a worktree with Yap/bin/Debug/net10.0/Yap.dll and its own Yap/wwwroot.
+// A side is one build: a worktree with Yap/bin/Debug/net11.0/Yap.dll and its own Yap/wwwroot.
 function side(key, spec, port) {
   // The label follows the last colon. A colon at index 1 is a Windows drive ("D:\PROJECTS\Yap"), not a label.
   const at = spec.lastIndexOf(':');
@@ -92,7 +92,7 @@ function side(key, spec, port) {
   return { key, label: at > 1 ? spec.slice(at + 1) : key, dir, port, commit: git('log', '-1', '--abbrev=8', '--format=%h %s'),
     // Uncommitted changes to the app make the commit a wrong name for the build; a record marks it.
     dirty: !!git('status', '--porcelain', '--', 'Yap'),
-    dll: path.join(dir, 'Yap', 'bin', 'Debug', 'net10.0', 'Yap.dll'), wwwroot: path.join(dir, 'Yap', 'wwwroot') };
+    dll: path.join(dir, 'Yap', 'bin', 'Debug', 'net11.0', 'Yap.dll'), wwwroot: path.join(dir, 'Yap', 'wwwroot') };
 }
 const sides = [side('A', arg('a', REPO), Number(arg('port-a', 5301)))];
 if (arg('b')) sides.push(side('B', arg('b'), Number(arg('port-b', 5302))));

@@ -30,7 +30,7 @@ the test accounts, so it stays out of the repository.
 
 ```powershell
 mkdir D:\PROJECTS\Yap\loadtest\runs; cd D:\PROJECTS\Yap\loadtest\runs
-dotnet ..\Yap.LoadTest.Orchestrator\bin\Debug\net10.0\Yap.LoadTest.Orchestrator.dll --server https://test.example.org
+dotnet ..\Yap.LoadTest.Orchestrator\bin\Debug\net11.0\Yap.LoadTest.Orchestrator.dll --server https://test.example.org
 ```
 
 ## Run
