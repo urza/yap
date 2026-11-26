@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 export const arg = name => process.argv.find(a => a.startsWith(`--${name}=`))?.slice(name.length + 3);
 
 export const REPO = fileURLToPath(new URL('../../', import.meta.url));
-export const DLL = arg('dll') ?? path.join(REPO, 'Yap', 'bin', 'Debug', 'net10.0', 'Yap.dll');
+export const DLL = arg('dll') ?? path.join(REPO, 'Yap', 'bin', 'Debug', 'net11.0', 'Yap.dll');
 export const PORT = Number(arg('port') ?? 5097);
 export const SCRATCH = arg('scratch') ?? path.join(os.tmpdir(), 'yap-browser-tests');
 export const BASE = `http://127.0.0.1:${PORT}`;

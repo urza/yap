@@ -6,7 +6,7 @@
 // through '/' got it the new build (main.js reloadForNewBuild). --signin runs it on the settings page of an account
 // and checks that the route survives the move.
 //
-// The two builds: build twice in different minutes (the stamp is yyyy-MM-dd-HHmm) and copy bin/Debug/net10.0 each
+// The two builds: build twice in different minutes (the stamp is yyyy-MM-dd-HHmm) and copy bin/Debug/net11.0 each
 // time, for example to /tmp/yapA and /tmp/yapB. Then:
 //   npm run update -- --dllA=/tmp/yapA --dllB=/tmp/yapB [--signin] [--stuckworker] [--browser=chromium] [--port=<n>]
 import { spawn } from 'node:child_process';
