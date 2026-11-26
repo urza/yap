@@ -50,8 +50,8 @@ Each line below has one of four states:
   feature.
 - **Decided.** The nickname replaces the name of the contact everywhere for this user. That includes the list of
   conversations, the messages and the notifications, and later the groups.
-- **Decided.** The nickname is the primary name of the contact. The original username shows in the profile details
-  of the contact.
+- **Decided.** The nickname is the primary name of the contact. The original username shows in the profile of the
+  contact as a secondary line in smaller text.
 - **Decided.** The search finds a contact by the nickname and by the username.
 - **Proposed.** A user sees only the people who share a conversation with them. This one rule covers direct messages
   and groups.
