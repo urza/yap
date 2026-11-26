@@ -46,11 +46,16 @@ Each line below has one of four states:
 - **Decided.** A new contact can write one message. The other person then accepts, blocks or deletes.
 - **Decided.** That first message is text only. The sender sees no profile and no presence before the accept.
 - **Decided.** A new user starts with two contacts: the person who invited them, and the bot.
+- **Decided.** A user can give a contact a nickname. No other person sees it. Signal and Discord have the same
+  feature.
+- **Decided.** The nickname replaces the name of the contact everywhere for this user. That includes the list of
+  conversations, the messages and the notifications, and later the groups.
 - **Proposed.** A user sees only the people who share a conversation with them. This one rule covers direct messages
   and groups.
 - **Proposed.** The username search has a rate limit, because an answer shows if a username exists.
-- **Proposed.** A user can give a contact a nickname. The app of this user then shows the nickname in place of the
-  name of the contact. No other person sees it. Signal and Discord have the same feature.
+- **Proposed.** The real username still shows in the profile of the contact, and the search finds both names.
+- **Proposed.** The server stores the nickname with the account of the user, so each device of the user shows it.
+  The server also needs the nickname for the text of a notification.
 - **Open.** A request from a stranger needs a place. Signal shows it in the same list, and the conversation opens
   with the buttons Accept, Block and Delete.
 - **Today.** dmonly already sends each person a small directory (the admin, the bot, themself).
