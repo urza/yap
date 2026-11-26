@@ -7,7 +7,7 @@ In the new direction, dmonly becomes a messenger. Users talk to each other in di
 user with admin rights. Groups come later.
 
 The discussion happens on a whiteboard: https://claude.ai/artifact/V6oAyCpyVmVsJj43GCBs5W. The link opens only for
-the owner of the board. This document is the readable record of that board. The last update was on 2026-11-25.
+the owner of the board. This document is the readable record of that board. The last update was on 2026-11-26.
 
 Each line below has one of four states:
 
@@ -49,6 +49,8 @@ Each line below has one of four states:
 - **Proposed.** A user sees only the people who share a conversation with them. This one rule covers direct messages
   and groups.
 - **Proposed.** The username search has a rate limit, because an answer shows if a username exists.
+- **Proposed.** A user can give a contact a nickname. The app of this user then shows the nickname in place of the
+  name of the contact. No other person sees it. Signal and Discord have the same feature.
 - **Open.** A request from a stranger needs a place. Signal shows it in the same list, and the conversation opens
   with the buttons Accept, Block and Delete.
 - **Today.** dmonly already sends each person a small directory (the admin, the bot, themself).
