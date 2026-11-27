@@ -394,9 +394,10 @@ public static class TusEndpoints
                                 // GET /api/tus/info, which answers 202 until Done or Refuse.
                                 _ = Task.Run(async () =>
                                 {
+                                    var reason = "Could not process this video";
                                     try
                                     {
-                                        var (compressedPath, durationMs) = await videoService.CompressVideoAsync(filePath);
+                                        var (compressedPath, durationMs, timedOut) = await videoService.CompressVideoAsync(filePath);
                                         if (compressedPath != null && durationMs > 0)
                                             mediaLog.SetCompressDuration(uniqueFileName, durationMs);
 
@@ -408,7 +409,9 @@ public static class TusEndpoints
                                             Done(new { url = $"/uploads/{uniqueFileName}", type });
                                             return;
                                         }
-                                        logger.LogWarning("Upload refused, the video did not compress: {FileName}", originalFileName);
+                                        if (timedOut) reason = "Could not process this video (timed out)";
+                                        logger.LogWarning("Upload refused, the video did not compress ({Reason}): {FileName}",
+                                            timedOut ? "timeout" : "ffmpeg error", originalFileName);
                                     }
                                     catch (Exception ex)
                                     {
@@ -416,7 +419,7 @@ public static class TusEndpoints
                                     }
                                     // The files of a refused upload are of no use to a message, and they are public.
                                     try { File.Delete(filePath); File.Delete(Path.Combine(uploadsFolder, Path.GetFileNameWithoutExtension(uniqueFileName) + "_poster.webp")); } catch { }
-                                    Refuse("Could not process this video");
+                                    Refuse(reason);
                                 });
                                 return;
                             }

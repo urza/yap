@@ -33,9 +33,9 @@ export function check(files, maxMB, inTray = 0) {
 // the stall check of sender.js.
 // A 202 does not use up an attempt. The result of a video comes after its compression (TusEndpoints.cs), and a long
 // video takes minutes: with a count of 30 polls the client refused a file that the server was about to finish.
-// The server stops the compression after 10 minutes (VideoService.cs). WORK_MS is above that, as the end for a
+// The server stops the compression after 15 minutes (VideoService.cs). WORK_MS is above that, as the end for a
 // server that answers 202 and never finishes.
-const WORK_MS = 12 * 60 * 1000;
+const WORK_MS = 17 * 60 * 1000;
 async function info(uploadUrl, attempts = 30, tick = () => {}) {
   const base = uploadUrl.slice(0, uploadUrl.lastIndexOf('/'));
   const id = uploadUrl.split('/').pop();
