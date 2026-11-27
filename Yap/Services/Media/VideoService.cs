@@ -20,6 +20,8 @@ public class VideoService(ILogger<VideoService> logger, GifFfmpegHelper ffmpeg)
 
     // Small videos don't need compression
     private const long CompressionThreshold = 8 * 1024 * 1024; // 8 MB
+    // 15 min timeout; the client wait stays above it (WORK_MS in upload.js).
+    private const int CompressTimeoutMs = 15 * 60 * 1000;
 
     /// <summary>
     /// Checks if a file extension is a supported video type.
@@ -89,13 +91,13 @@ public class VideoService(ILogger<VideoService> logger, GifFfmpegHelper ffmpeg)
 
     /// <summary>
     /// Compresses video to MP4 H.264 (background, slow).
-    /// Returns the compressed file path and duration in ms, or (null, 0) on failure.
+    /// Returns the compressed file path, duration in ms, and whether the run timed out.
     /// Deletes the original file after successful compression. A failure leaves the original as it was
     /// and no .mp4 beside it.
     /// </summary>
-    public async Task<(string? Path, long DurationMs)> CompressVideoAsync(string videoPath)
+    public async Task<(string? Path, long DurationMs, bool TimedOut)> CompressVideoAsync(string videoPath)
     {
-        if (!IsAvailable) return (null, 0);
+        if (!IsAvailable) return (null, 0, false);
 
         try
         {
@@ -110,7 +112,7 @@ public class VideoService(ILogger<VideoService> logger, GifFfmpegHelper ffmpeg)
             if (extension == ".mp4" && fileSize <= CompressionThreshold)
             {
                 logger.LogDebug("Video {VideoPath} is small MP4 ({Size}KB), skipping compression", videoPath, fileSize / 1024);
-                return (videoPath, 0);
+                return (videoPath, 0, false);
             }
 
             // ffmpeg never writes to the final name, also not for a .mov, where that name is free. A run that fails
@@ -119,8 +121,8 @@ public class VideoService(ILogger<VideoService> logger, GifFfmpegHelper ffmpeg)
             var outputPath = Path.Combine(directory, $"{filename}_compressed.mp4");
             var isInPlace = string.Equals(videoPath, compressedPath, StringComparison.OrdinalIgnoreCase);
 
-            var args = $"-i \"{videoPath}\" -c:v libx264 -crf 23 -preset medium -c:a aac -b:a 128k -movflags +faststart -vf \"scale='min(1280,iw)':-2\" -y \"{outputPath}\"";
-            var exitCode = await RunFfmpegAsync(args, timeoutMs: 600_000); // 10 min timeout; the client's wait is above it (WORK_MS, upload.js)
+            var args = $"-hide_banner -nostats -i \"{videoPath}\" -c:v libx264 -crf 23 -preset medium -c:a aac -b:a 128k -movflags +faststart -vf \"scale='min(1280,iw)':-2\" -y \"{outputPath}\"";
+            var (exitCode, _, stderr) = await ffmpeg.RunProcessAsync("ffmpeg", args, CompressTimeoutMs, CancellationToken.None);
 
             if (exitCode == 0 && File.Exists(outputPath))
             {
@@ -140,19 +142,23 @@ public class VideoService(ILogger<VideoService> logger, GifFfmpegHelper ffmpeg)
                     fileSize / 1024,
                     new FileInfo(compressedPath).Length / 1024,
                     sw.ElapsedMilliseconds);
-                return (compressedPath, sw.ElapsedMilliseconds);
+                return (compressedPath, sw.ElapsedMilliseconds, false);
             }
 
             // Cleanup temp file on failure
             GifFfmpegHelper.TryDelete(outputPath);
 
-            logger.LogWarning("Failed to compress video {VideoPath} (exit code: {ExitCode})", videoPath, exitCode);
-            return (null, 0);
+            var timedOut = exitCode == -1 && stderr == "Timeout";
+            if (timedOut)
+                logger.LogWarning("Video compression timed out after {TimeoutMin} min for {VideoPath}", CompressTimeoutMs / 60_000, videoPath);
+            else
+                logger.LogWarning("Failed to compress video {VideoPath} (exit code: {ExitCode}): {Stderr}", videoPath, exitCode, GifFfmpegHelper.TruncateTail(stderr));
+            return (null, 0, timedOut);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error compressing video {VideoPath}", videoPath);
-            return (null, 0);
+            return (null, 0, false);
         }
     }
 

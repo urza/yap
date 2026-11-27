@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.Text.Json;
 
 namespace Yap.Services.Gifs;
 
@@ -77,50 +78,66 @@ public class GifFfmpegHelper
         if (!IsAvailable || !File.Exists(filePath)) return null;
 
         // We request both video and audio stream info plus format duration in one ffprobe call.
+        // Use JSON instead of flat key=value output: ffprobe prints codec_name before codec_type
+        // regardless of the -show_entries order, so a flat parser misses the video codec on a
+        // video-only file (no audio stream after the video stream).
         var args = $"-v error -show_entries " +
                    $"stream=codec_type,codec_name,width,height:format=duration " +
-                   $"-of default=noprint_wrappers=1 \"{filePath}\"";
+                   $"-of json \"{filePath}\"";
 
         var (exitCode, stdout, _) = await RunProcessAsync("ffprobe", args, ProbeTimeoutMs, ct);
         if (exitCode != 0) return null;
 
-        string? videoCodec = null;
-        int width = 0, height = 0;
-        bool hasAudio = false;
-        double duration = 0;
-        // ffprobe with multiple stream entries emits a flat key=value list per stream.
-        // We rely on stream ordering: each stream block starts with codec_type=.
-        string? currentStreamType = null;
-        foreach (var raw in stdout.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        try
         {
-            var line = raw.Trim();
-            var eq = line.IndexOf('=');
-            if (eq < 0) continue;
-            var key = line[..eq];
-            var value = line[(eq + 1)..];
+            using var doc = JsonDocument.Parse(stdout);
+            var root = doc.RootElement;
 
-            switch (key)
+            string? videoCodec = null;
+            int width = 0, height = 0;
+            bool hasAudio = false;
+            double duration = 0;
+
+            if (root.TryGetProperty("streams", out var streams) && streams.ValueKind == JsonValueKind.Array)
             {
-                case "codec_type":
-                    currentStreamType = value;
-                    if (value == "audio") hasAudio = true;
-                    break;
-                case "codec_name":
-                    if (currentStreamType == "video" && videoCodec == null) videoCodec = value;
-                    break;
-                case "width":
-                    if (currentStreamType == "video" && width == 0) int.TryParse(value, out width);
-                    break;
-                case "height":
-                    if (currentStreamType == "video" && height == 0) int.TryParse(value, out height);
-                    break;
-                case "duration":
-                    double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out duration);
-                    break;
-            }
-        }
+                foreach (var stream in streams.EnumerateArray())
+                {
+                    var codecType = stream.TryGetProperty("codec_type", out var ctEl) && ctEl.ValueKind == JsonValueKind.String
+                        ? ctEl.GetString()
+                        : null;
 
-        return new MediaProbeResult(videoCodec, width, height, hasAudio, duration);
+                    if (codecType == "audio")
+                    {
+                        hasAudio = true;
+                    }
+                    else if (codecType == "video")
+                    {
+                        if (videoCodec == null && stream.TryGetProperty("codec_name", out var cnEl) && cnEl.ValueKind == JsonValueKind.String)
+                            videoCodec = cnEl.GetString();
+                        if (width == 0 && stream.TryGetProperty("width", out var wEl) && wEl.TryGetInt32(out var w))
+                            width = w;
+                        if (height == 0 && stream.TryGetProperty("height", out var hEl) && hEl.TryGetInt32(out var h))
+                            height = h;
+                    }
+                }
+            }
+
+            if (root.TryGetProperty("format", out var format) && format.ValueKind == JsonValueKind.Object
+                && format.TryGetProperty("duration", out var durEl))
+            {
+                if (durEl.ValueKind == JsonValueKind.String)
+                    double.TryParse(durEl.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out duration);
+                else if (durEl.ValueKind == JsonValueKind.Number)
+                    durEl.TryGetDouble(out duration);
+            }
+
+            return new MediaProbeResult(videoCodec, width, height, hasAudio, duration);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogWarning(ex, "Failed to parse ffprobe JSON output for {Path}", filePath);
+            return null;
+        }
     }
 
     /// <summary>

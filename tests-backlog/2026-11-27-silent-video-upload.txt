@@ -1,0 +1,6 @@
+Change: Accept video-only uploads without an audio track, raise the video compression timeout to 15 minutes, and report timeout as the failure reason.
+Preconditions: Signed-in user in a room with permission to send messages, and ffmpeg available on the server.
+User Flow: Pick or drop a silent video file longer than 30 seconds (video stream only, no audio track, such as a .mov or .mp4) and send the message.
+Expected Result: The upload succeeds, the server converts the file to .mp4, and the message appears in the timeline with a playable video.
+Edge Cases: Upload a short silent video (under 30 seconds) and verify it sends as a GIF; upload a normal video with audio and verify it still uploads and plays; check that a video compression timeout shows "Could not process this video (timed out)".
+Bug Repro: Before this fix, uploading a silent single-stream video (such as 200MB_480P_THETESTDATA.COM_mov.mov) failed after upload with "Could not process this file".
