@@ -7,10 +7,6 @@
     <NoWarn>$(NoWarn);NU1903</NoWarn>
   </PropertyGroup>
 
-  <ItemGroup>
-    <InternalsVisibleTo Include="Yap.Tests" />
-  </ItemGroup>
-
   <PropertyGroup>
     <!-- Runtime data, not project files: the tus store and the uploads land here while the app runs.
          As project items they would be published into the image, and the IDE's file watcher treats a
