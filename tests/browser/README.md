@@ -73,7 +73,7 @@ or production.
 
 ## Run
 
-Build the server first. The scripts use `Yap/bin/Debug/net10.0/Yap.dll`.
+Build the server first. The scripts use `Yap/bin/Debug/net11.0/Yap.dll`.
 
 ```
 dotnet build Yap

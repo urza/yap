@@ -1,13 +1,10 @@
-# Exact patch tags, not the floating 10.0: the runtime carries the fix for CVE-2026-111497 (an out-of-bounds
-# write in the Brotli decoder, fixed in 10.0.14 on 2026-10-25). A floating tag resolves to whatever image the
-# Docker host has cached, so a rebuild can keep an old runtime with no change in this file. Bump both tags
-# together on each .NET 10 patch release (the SDK tag below ships the same runtime).
-FROM mcr.microsoft.com/dotnet/aspnet:10.0.14 AS base
-# ffmpeg/ffprobe are pinned static builds, not distro packages: the GIF preview pipeline decodes
+# Floating 11.0 tags so each Docker build/publish picks up the latest .NET 11 security and OS patches.
+FROM mcr.microsoft.com/dotnet/aspnet:11.0 AS base
+# ffmpeg/ffprobe are static builds, not distro packages: the GIF preview pipeline decodes
 # animated WebP, which needs ffmpeg >= 9.0 — no 6.x/7.x/8.x release has the decoder, so no distro
 # repo qualifies (noble ships 6.1, resolute 8.0; verified against real library files 2026-08-08).
 # yt-dlp and every other media path use these same binaries via PATH.
-COPY --from=mwader/static-ffmpeg:9.0 /ffmpeg /ffprobe /usr/local/bin/
+COPY --from=mwader/static-ffmpeg:latest /ffmpeg /ffprobe /usr/local/bin/
 # yt-dlp_linux (PyInstaller build), NOT the plain zipimport binary: only the standalone
 # build bundles curl_cffi, which the TikTok extractor needs to impersonate a browser.
 # Without it TikTok answers server IPs with a challenge page and extraction fails
@@ -22,12 +19,12 @@ ADD --chmod=755 https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp
 # solve the player challenge in JS, which needs a runtime on PATH; without one the metadata probe
 # exits 1 with "No supported JavaScript runtime could be found" and every YouTube link silently
 # gets no embed (seen on live 2026-09-06). Deno is the only runtime yt-dlp enables by default.
-# Pinned bare binary from the official image, same pattern as ffmpeg above.
-COPY --from=denoland/deno:bin-2.9.6 /deno /usr/local/bin/deno
+# Bare binary from the official image, tracking the latest stable release.
+COPY --from=denoland/deno:bin /deno /usr/local/bin/deno
 WORKDIR /app
 EXPOSE 8080
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0.403 AS build
+FROM mcr.microsoft.com/dotnet/sdk:11.0 AS build
 WORKDIR /src
 COPY ["Yap.csproj", "."]
 RUN dotnet restore
